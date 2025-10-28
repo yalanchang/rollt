@@ -11,11 +11,20 @@ interface AuthRequest extends Request {
 // 獲取動態牆
 router.get("/feed", async (req: AuthRequest, res: Response) => {
   try {
+    // 檢查 mediaType 字段是否存在
+    const [columns] = await db.query(
+      "SHOW COLUMNS FROM posts LIKE 'mediaType'"
+    );
+    
+    const hasMediaType = ((columns as any[]).length > 0);
+    const mediaTypeField = hasMediaType ? 'p.mediaType,' : '';
+    
     const [posts] = await db.query(`
       SELECT 
         p.id,
         p.userId,
         p.imageUrl,
+        ${mediaTypeField}
         p.caption,
         p.createdAt,
         u.username,
@@ -28,7 +37,13 @@ router.get("/feed", async (req: AuthRequest, res: Response) => {
       LIMIT 50
     `);
 
-    res.json(posts);
+    // 確保所有貼文都有 mediaType
+    const formattedPosts = (posts as any[]).map(post => ({
+      ...post,
+      mediaType: post.mediaType || 'image'
+    }));
+
+    res.json(formattedPosts);
   } catch (error) {
     console.error("獲取動態牆錯誤:", error);
     res.status(500).json({ message: "伺服器錯誤" });
@@ -38,27 +53,60 @@ router.get("/feed", async (req: AuthRequest, res: Response) => {
 // 創建貼文
 router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { caption, imageUrl } = req.body;
+    const { caption, imageUrl, mediaType } = req.body;
     const userId = req.userId;
 
+    console.log('📝 收到創建貼文請求:', { userId, hasCaption: !!caption, hasImageUrl: !!imageUrl, mediaType });
+
     if (!imageUrl) {
-      return res.status(400).json({ message: "缺少圖片" });
+      return res.status(400).json({ message: "缺少媒體文件" });
     }
 
-    await db.query(
-      "INSERT INTO posts (userId, caption, imageUrl) VALUES (?, ?, ?)",
-      [userId, caption || "", imageUrl]
-    );
+    // 設置當前連接的 max_allowed_packet 以支持大文件
+    try {
+      await db.query("SET SESSION max_allowed_packet = 67108864");
+    } catch (setError) {
+      console.log('⚠️ 無法設置 max_allowed_packet');
+    }
 
+    // 檢查 mediaType 字段是否存在
+    let hasMediaType = false;
+    try {
+      const [columns] = await db.query(
+        "SHOW COLUMNS FROM posts LIKE 'mediaType'"
+      );
+      hasMediaType = (columns as any[]).length > 0;
+      console.log('🔍 數據庫檢查:', { hasMediaType });
+    } catch (checkError) {
+      console.log('⚠️ 檢查 mediaType 字段時出錯，假設不存在');
+    }
+    
+    // 插入數據
+    if (hasMediaType) {
+      // 如果字段存在，使用新格式
+      console.log('✅ 使用新格式插入（包含 mediaType）');
+      await db.query(
+        "INSERT INTO posts (userId, caption, imageUrl, mediaType) VALUES (?, ?, ?, ?)",
+        [userId, caption || "", imageUrl, mediaType || 'image']
+      );
+    } else {
+      // 如果字段不存在，使用舊格式（兼容舊數據庫）
+      console.log('✅ 使用舊格式插入（不包含 mediaType）');
+      await db.query(
+        "INSERT INTO posts (userId, caption, imageUrl) VALUES (?, ?, ?)",
+        [userId, caption || "", imageUrl]
+      );
+    }
+
+    // 構建查詢並獲取新創建的貼文
+    const selectFields = hasMediaType 
+      ? 'p.id, p.userId, p.imageUrl, p.mediaType, p.caption, p.createdAt, u.username, u.avatar as userAvatar'
+      : 'p.id, p.userId, p.imageUrl, p.caption, p.createdAt, u.username, u.avatar as userAvatar';
+    
+    console.log('🔍 查詢字段:', selectFields);
+    
     const [newPost] = await db.query(
-      `SELECT 
-        p.id,
-        p.userId,
-        p.imageUrl,
-        p.caption,
-        p.createdAt,
-        u.username,
-        u.avatar as userAvatar
+      `SELECT ${selectFields}
       FROM posts p
       JOIN users u ON p.userId = u.id
       WHERE p.userId = ?
@@ -67,10 +115,31 @@ router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
       [userId]
     );
 
+    // 確保返回的數據有 mediaType
+    if (!hasMediaType && newPost && (newPost as any[]).length > 0) {
+      (newPost as any[])[0].mediaType = 'image'; // 默認為圖片
+    }
+
+    console.log('✅ 貼文創建成功');
+
     res.status(201).json(newPost[0]);
-  } catch (error) {
+  } catch (error: any) {
     console.error("創建貼文錯誤:", error);
-    res.status(500).json({ message: "伺服器錯誤" });
+    console.error("詳細錯誤:", error.message);
+    console.error("錯誤代碼:", error.code);
+    
+    // 提供更友好的錯誤信息
+    let errorMessage = "伺服器錯誤";
+    if (error.code === 'ER_DATA_TOO_LONG') {
+      errorMessage = "圖片數據太大，請壓縮圖片或使用較小的文件";
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    res.status(500).json({ 
+      message: errorMessage,
+      error: error.message 
+    });
   }
 });
 
