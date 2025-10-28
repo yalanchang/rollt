@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuthStore } from '@/app/store/authStore';
@@ -17,6 +17,16 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [showAnimation, setShowAnimation] = useState(true);
+
+  // 啟動動畫效果
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowAnimation(false);
+    }, 3000); 
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,41 +34,27 @@ export default function LoginPage() {
     setServerError('');
     setLoading(true);
 
-    console.log('🔐 開始登入...');
-    console.log('📧 信箱:', email);
 
     try {
-      console.log('🌐 調用 API:', `${API_URL}/auth/login`);
 
       const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password,
       });
 
-      console.log('✅ 登入成功:', response.data);
 
-      // 1️⃣ 先保存 token
       const token = response.data.token;
-      localStorage.setItem('token', token);
-      console.log('📝 Token 已保存');
 
-      // 2️⃣ 保存用戶信息
       const userData = {
         id: response.data.user.id,
         username: response.data.user.username,
         email: response.data.user.email,
       };
       localStorage.setItem('user', JSON.stringify(userData));
-      console.log('👤 用戶信息已保存:', userData);
 
-      // 3️⃣ 更新 Zustand 狀態
       setUser(userData);
-      console.log('🔄 Zustand 狀態已更新');
 
-      // 4️⃣ 延遲重定向
-      console.log('⏳ 準備重定向...');
       setTimeout(() => {
-        console.log('🚀 重定向到首頁');
         router.push('/');
       }, 500);
 
@@ -66,15 +62,12 @@ export default function LoginPage() {
       console.error('❌ 登入錯誤:', err);
 
       if (err.response?.data?.message) {
-        console.log('📛 後端返回錯誤:', err.response.data.message);
         setError(err.response.data.message);
       } else if (err.message === 'Network Error') {
-        console.log('🌐 網絡錯誤 - 後端無法連接');
         setServerError(
           '無法連接到服務器。請確保後端服務運行在 http://localhost:5000'
         );
       } else {
-        console.log('⚠️ 未知錯誤:', err.message);
         setError('登入失敗，請稍後重試');
       }
     } finally {
@@ -83,11 +76,40 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-400 to-purple-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-primary to-primary flex items-center justify-center p-4 relative">
+      {/* 啟動動畫 */}
+      {showAnimation && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center z-50 bg-gradient-to-br from-primary to-primary"
+          style={{
+            animation: 'fadeOut 0.5s ease-out 3s forwards'
+          }}
+        >
+          <div className="text-center">
+            <h1 
+              className="text-7xl font-bold text-white mb-4"
+              style={{
+                animation: 'slideInScale 1s ease-out, float 3s ease-in-out infinite'
+              }}
+            >
+              Rollt
+            </h1>
+            
+          </div>
+        </div>
+      )}
+
+      {/* 登入表單 */}
+      <div 
+        className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full"
+        style={{
+          opacity: showAnimation ? 0 : 1,
+          transition: 'opacity 0.5s ease-in'
+        }}
+      >
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-pink-500">Rollt</h1>
+          <h1 className="text-4xl font-bold text-primary">Rollt</h1>
           <p className="text-gray-600 mt-2">分享你的精彩時刻</p>
         </div>
 
@@ -141,7 +163,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-br from-primary to-primary hover:from-sec  text-white font-semibold py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '登入中...' : '登入'}
           </button>
@@ -160,26 +182,14 @@ export default function LoginPage() {
             還沒有帳號？
             <a
               href="/register"
-              className="text-pink-500 font-semibold hover:underline ml-1"
+              className="text-primary font-semibold hover:underline ml-1"
             >
               立即註冊
             </a>
           </p>
         </div>
 
-        {/* 幫助信息 */}
-        <div className="mt-6 p-3 bg-blue-50 text-blue-700 rounded-lg text-xs border border-blue-200">
-          <p className="font-semibold mb-2">💡 提示：</p>
-          <p className="mb-1">
-            • 後端需要運行在 http://localhost:5000
-          </p>
-          <p className="mb-1">
-            • MySQL 數據庫需要啟動
-          </p>
-          <p>
-            • 打開瀏覽器 F12 → Console 看詳細日誌
-          </p>
-        </div>
+        
       </div>
     </div>
   );

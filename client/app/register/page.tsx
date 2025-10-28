@@ -55,9 +55,6 @@ export default function RegisterPage() {
     }
 
     try {
-      console.log('🌐 調用 API:', `${API_URL}/auth/register`);
-      console.log('📋 用戶名:', formData.username);
-      console.log('📧 信箱:', formData.email);
 
       const response = await axios.post(`${API_URL}/auth/register`, {
         username: formData.username,
@@ -65,30 +62,21 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      console.log('✅ 註冊成功:', response.data);
 
-      // 1️⃣ 先保存 token
       const token = response.data.token;
       localStorage.setItem('token', token);
       console.log('📝 Token 已保存');
 
-      // 2️⃣ 保存用戶信息
       const userData = {
         id: response.data.user.id,
         username: response.data.user.username,
         email: response.data.user.email,
       };
       localStorage.setItem('user', JSON.stringify(userData));
-      console.log('👤 用戶信息已保存:', userData);
 
-      // 3️⃣ 更新 Zustand 狀態
       setUser(userData);
-      console.log('🔄 Zustand 狀態已更新');
 
-      // 4️⃣ 延遲重定向
-      console.log('⏳ 準備重定向...');
-      setTimeout(() => {
-        console.log('🚀 重定向到首頁');
+            setTimeout(() => {
         router.push('/');
       }, 500);
 
@@ -96,15 +84,12 @@ export default function RegisterPage() {
       console.error('❌ 註冊錯誤:', err);
 
       if (err.response?.data?.message) {
-        console.log('📛 後端返回錯誤:', err.response.data.message);
         setError(err.response.data.message);
       } else if (err.message === 'Network Error') {
-        console.log('🌐 網絡錯誤 - 後端無法連接');
         setServerError(
           '無法連接到服務器。請確保後端服務運行在 http://localhost:5000'
         );
       } else {
-        console.log('⚠️ 未知錯誤:', err.message);
         setError('註冊失敗，請稍後重試');
       }
     } finally {
@@ -113,11 +98,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-400 to-purple-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary to-primary flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-pink-500">Rollt</h1>
+          <h1 className="text-4xl font-bold text-primary">Rollt</h1>
           <p className="text-gray-600 mt-2">加入我們，分享你的故事</p>
         </div>
 
@@ -205,7 +190,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-primary to-primary hover:from-sec hover:to-sec text-white font-semibold py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '註冊中...' : '建立帳號'}
           </button>
@@ -224,19 +209,14 @@ export default function RegisterPage() {
             已有帳號？
             <a
               href="/login"
-              className="text-pink-500 font-semibold hover:underline ml-1"
+              className="text-primary font-semibold hover:underline ml-1"
             >
               立即登入
             </a>
           </p>
         </div>
 
-        {/* 幫助信息 */}
-        <div className="mt-6 p-3 bg-blue-50 text-blue-700 rounded-lg text-xs border border-blue-200">
-          <p className="font-semibold mb-1">💡 需求：</p>
-          <p>• 後端服務運行在 http://localhost:5000</p>
-          <p>• MySQL 數據庫已啟動</p>
-        </div>
+      
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ export interface Post {
   username: string;
   userAvatar: string;
   imageUrl: string;
+  mediaType?: string;
   caption: string;
   likes: number;
   comments: number;

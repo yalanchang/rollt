@@ -72,6 +72,7 @@ export default function Home() {
         username: post.username,
         userAvatar: post.userAvatar || '👤',
         imageUrl: post.imageUrl,
+        mediaType: post.mediaType || 'image',
         caption: post.caption,
         likes: post.likes || 0,
         comments: post.comments || 0,
@@ -121,13 +122,7 @@ export default function Home() {
           {/* 頭部 */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">你的動態</h2>
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition disabled:opacity-50"
-            >
-              {loading ? '載入中...' : '重新載入'}
-            </button>
+          
           </div>
 
           {/* 錯誤信息 */}

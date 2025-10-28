@@ -55,12 +55,20 @@ export default function PostCard({ post }: PostCardProps) {
         )}
       </div>
 
-      {/* 圖片 */}
-      <img
-        src={post.imageUrl}
-        alt={post.caption}
-        className="w-full max-h-96 object-cover"
-      />
+      {/* 媒體內容 */}
+      {post.mediaType === 'video' ? (
+        <video
+          src={post.imageUrl}
+          controls
+          className="w-full max-h-96 object-contain bg-black"
+        />
+      ) : (
+        <img
+          src={post.imageUrl}
+          alt={post.caption}
+          className="w-full max-h-96 object-cover"
+        />
+      )}
 
       {/* 互動按鈕 */}
       <div className="flex gap-4 p-4 border-b">

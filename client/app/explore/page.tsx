@@ -13,6 +13,7 @@ interface Post {
   username: string;
   userAvatar?: string;
   imageUrl: string;
+  mediaType?: string;
   caption: string;
   likes: number;
   comments: number;
@@ -142,13 +143,21 @@ export default function ExplorePage() {
                 key={post.id}
                 className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden"
               >
-                {/* 貼文圖片 */}
+                {/* 貼文媒體 */}
                 <div className="relative w-full h-64 bg-gray-200 overflow-hidden">
-                  <img
-                    src={post.imageUrl}
-                    alt={post.caption}
-                    className="w-full h-full object-cover hover:scale-105 transition duration-300"
-                  />
+                  {post.mediaType === 'video' ? (
+                    <video
+                      src={post.imageUrl}
+                      className="w-full h-full object-cover"
+                      controls
+                    />
+                  ) : (
+                    <img
+                      src={post.imageUrl}
+                      alt={post.caption}
+                      className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                    />
+                  )}
                 </div>
 
                 {/* 用戶信息 */}
