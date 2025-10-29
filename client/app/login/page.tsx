@@ -19,12 +19,10 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState('');
   const [showAnimation, setShowAnimation] = useState(true);
 
-  // 啟動動畫效果
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowAnimation(false);
-    }, 3000); 
-
+    }, 2500); 
     return () => clearTimeout(timer);
   }, []);
 
@@ -36,19 +34,18 @@ export default function LoginPage() {
 
 
     try {
-
       const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password,
       });
 
-
       const token = response.data.token;
-
+      localStorage.setItem('token', token);
       const userData = {
         id: response.data.user.id,
         username: response.data.user.username,
         email: response.data.user.email,
+    
       };
       localStorage.setItem('user', JSON.stringify(userData));
 
@@ -82,19 +79,33 @@ export default function LoginPage() {
         <div 
           className="absolute inset-0 flex items-center justify-center z-50 bg-gradient-to-br from-primary to-primary"
           style={{
-            animation: 'fadeOut 0.5s ease-out 3s forwards'
+            animation: 'fadeOut 0.5s ease-out 2s forwards'
           }}
         >
           <div className="text-center">
             <h1 
               className="text-7xl font-bold text-white mb-4"
               style={{
-                animation: 'slideInScale 1s ease-out, float 3s ease-in-out infinite'
+                animation: 'slideInScale 1s ease-out, float 2s ease-in-out infinite'
               }}
             >
               Rollt
             </h1>
-            
+            <div className="flex gap-2 justify-center mt-6">
+              <div 
+                className="w-3 h-3 bg-white rounded-full"
+                style={{
+                  animation: 'bounce 0.6s ease-in-out infinite'
+                }}
+              ></div>
+           
+              <div 
+                className="w-3 h-3 bg-white rounded-full"
+                style={{
+                  animation: 'bounce 0.6s ease-out 0.2s infinite'
+                }}
+              ></div>
+            </div>
           </div>
         </div>
       )}
@@ -104,13 +115,11 @@ export default function LoginPage() {
         className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full"
         style={{
           opacity: showAnimation ? 0 : 1,
-          transition: 'opacity 0.5s ease-in'
+          transition: 'opacity 0.2s ease-out'
         }}
       >
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary">Rollt</h1>
-          <p className="text-gray-600 mt-2">分享你的精彩時刻</p>
         </div>
 
         {/* 伺服器錯誤 */}
@@ -138,7 +147,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              placeholder="輸入您的信箱"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition text-gray-900"
               required
             />
@@ -162,10 +171,9 @@ export default function LoginPage() {
           {/* 登入按鈕 */}
           <button
             type="submit"
-            disabled={loading}
             className="w-full bg-gradient-to-br from-primary to-primary hover:from-sec  text-white font-semibold py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '登入中...' : '登入'}
+            登入
           </button>
         </form>
 

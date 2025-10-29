@@ -65,7 +65,7 @@ export default function CreatePage() {
       // 將文件轉換為 base64
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      
+
       reader.onload = async () => {
         const base64Data = reader.result as string;
 
@@ -93,7 +93,7 @@ export default function CreatePage() {
           router.push('/');
         } catch (err: any) {
           console.error('❌ 創建貼文錯誤:', err);
-          
+
           if (err.response?.data?.message) {
             setError(err.response.data.message);
           } else if (err.response?.status === 401) {
@@ -123,7 +123,7 @@ export default function CreatePage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    
+
     if (!selectedFile) return;
 
     // 檢查文件大小
@@ -178,7 +178,6 @@ export default function CreatePage() {
           {/* 標題 */}
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900">建立新貼文</h2>
-            <p className="text-gray-600 text-sm mt-1">分享你的精彩時刻</p>
           </div>
 
           {/* 錯誤訊息 */}
@@ -192,9 +191,7 @@ export default function CreatePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 文件上傳區域 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                照片或影片
-              </label>
+
 
               {/* 隱藏的文件輸入 */}
               <input
@@ -207,7 +204,7 @@ export default function CreatePage() {
 
               {previewUrl ? (
                 <div className="relative">
-                  <div className="relative rounded-lg overflow-hidden bg-gray-200 border-2 border-gray-300">
+                  <div className="relative rounded-lg overflow-hidden  w-fit">
                     {mediaType === 'image' ? (
                       <img
                         src={previewUrl}
@@ -229,7 +226,7 @@ export default function CreatePage() {
                       <BiX size={24} />
                     </button>
                   </div>
-                 
+
                 </div>
               ) : (
                 <div
@@ -237,18 +234,18 @@ export default function CreatePage() {
                   className="relative cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-primary hover:bg-primary/5 transition"
                 >
                   <div className="flex flex-col items-center justify-center text-center">
-                    <BiUpload size={64} className="text-gray-400 mb-4" />
-                 
-                 
+                    <BiUpload size={40} className="text-gray-400 mb-4" />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      選擇照片或影片
+                      </label>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 描述輸入 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                描述
+                內容
               </label>
               <textarea
                 value={caption}
@@ -257,9 +254,7 @@ export default function CreatePage() {
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-gray-900 resize-none"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {caption.length} / 500
-              </p>
+
             </div>
 
             {/* 按鈕 */}
@@ -276,7 +271,6 @@ export default function CreatePage() {
                   </>
                 ) : (
                   <>
-                    <BiCheck size={20} />
                     發佈貼文
                   </>
                 )}

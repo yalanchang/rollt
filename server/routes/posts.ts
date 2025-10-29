@@ -11,14 +11,13 @@ interface AuthRequest extends Request {
 // 獲取動態牆
 router.get("/feed", async (req: AuthRequest, res: Response) => {
   try {
-    // 檢查 mediaType 字段是否存在
     const [columns] = await db.query(
       "SHOW COLUMNS FROM posts LIKE 'mediaType'"
     );
-    
+
     const hasMediaType = ((columns as any[]).length > 0);
     const mediaTypeField = hasMediaType ? 'p.mediaType,' : '';
-    
+
     const [posts] = await db.query(`
       SELECT 
         p.id,
@@ -37,7 +36,6 @@ router.get("/feed", async (req: AuthRequest, res: Response) => {
       LIMIT 50
     `);
 
-    // 確保所有貼文都有 mediaType
     const formattedPosts = (posts as any[]).map(post => ({
       ...post,
       mediaType: post.mediaType || 'image'
@@ -49,7 +47,76 @@ router.get("/feed", async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: "伺服器錯誤" });
   }
 });
+// 獲取自己貼文
+router.get("/my-posts", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
 
+    const [columns] = await db.query(
+      "SHOW COLUMNS FROM posts LIKE 'mediaType'"
+    );
+    const hasMediaType = ((columns as any[]).length > 0);
+    const mediaTypeField = hasMediaType ? 'p.mediaType,' : '';
+
+    const [posts] = await db.query(`
+      SELECT 
+        p.id,
+        p.userId,
+        p.imageUrl,
+        ${mediaTypeField}
+        p.caption,
+        p.createdAt,
+        u.username,
+        u.avatar as userAvatar,
+        (SELECT COUNT(*) FROM likes WHERE postId = p.id) as likes,
+        (SELECT COUNT(*) FROM comments WHERE postId = p.id) as comments
+      FROM posts p
+      JOIN users u ON p.userId = u.id
+      WHERE p.userId = ?
+      ORDER BY p.createdAt DESC
+    `, [userId]);
+
+    const formattedPosts = (posts as any[]).map(post => ({
+      ...post,
+      mediaType: post.mediaType || 'image'
+    }));
+
+    res.json(formattedPosts);
+  } catch (error) {
+    console.error("獲取自己的貼文錯誤:", error);
+    res.status(500).json({ message: "伺服器錯誤" });
+  }
+});
+
+
+router.get("/:postId", async (req: AuthRequest, res: Response) => {
+  try {
+    const { postId } = req.params;
+
+    const [posts] = await db.query(`
+      SELECT 
+        p.id,
+        p.userId,
+        p.imageUrl,
+        p.caption,
+        p.createdAt,
+        u.username,
+        (SELECT COUNT(*) FROM likes WHERE postId = p.id) as likes,
+        (SELECT COUNT(*) FROM comments WHERE postId = p.id) as comments
+      FROM posts p
+      JOIN users u ON p.userId = u.id
+      WHERE p.id = ?
+    `, [postId]);
+
+    if (posts.length === 0) {
+      return res.status(404).json({ message: "貼文不存在" });
+    }
+
+    res.json(posts[0]);
+  } catch (error) {
+    res.status(500).json({ message: "伺服器錯誤" });
+  }
+});
 // 創建貼文
 router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -76,15 +143,11 @@ router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
         "SHOW COLUMNS FROM posts LIKE 'mediaType'"
       );
       hasMediaType = (columns as any[]).length > 0;
-      console.log('🔍 數據庫檢查:', { hasMediaType });
     } catch (checkError) {
-      console.log('⚠️ 檢查 mediaType 字段時出錯，假設不存在');
     }
-    
+
     // 插入數據
     if (hasMediaType) {
-      // 如果字段存在，使用新格式
-      console.log('✅ 使用新格式插入（包含 mediaType）');
       await db.query(
         "INSERT INTO posts (userId, caption, imageUrl, mediaType) VALUES (?, ?, ?, ?)",
         [userId, caption || "", imageUrl, mediaType || 'image']
@@ -98,13 +161,12 @@ router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // 構建查詢並獲取新創建的貼文
-    const selectFields = hasMediaType 
+    const selectFields = hasMediaType
       ? 'p.id, p.userId, p.imageUrl, p.mediaType, p.caption, p.createdAt, u.username, u.avatar as userAvatar'
       : 'p.id, p.userId, p.imageUrl, p.caption, p.createdAt, u.username, u.avatar as userAvatar';
-    
+
     console.log('🔍 查詢字段:', selectFields);
-    
+
     const [newPost] = await db.query(
       `SELECT ${selectFields}
       FROM posts p
@@ -127,7 +189,7 @@ router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
     console.error("創建貼文錯誤:", error);
     console.error("詳細錯誤:", error.message);
     console.error("錯誤代碼:", error.code);
-    
+
     // 提供更友好的錯誤信息
     let errorMessage = "伺服器錯誤";
     if (error.code === 'ER_DATA_TOO_LONG') {
@@ -135,13 +197,14 @@ router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: errorMessage,
-      error: error.message 
+      error: error.message
     });
   }
 });
+
 
 // 喜歡貼文
 router.post(

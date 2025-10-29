@@ -34,7 +34,6 @@ export default function Home() {
   
   const checkAuthAndFetchPosts = async () => {
     try {
-      // 檢查用戶是否登入
       const token = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
 

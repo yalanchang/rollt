@@ -8,8 +8,6 @@ import { useAuthStore } from '@/app/store/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-console.log('📍 API_URL:', API_URL);
-
 export default function RegisterPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
@@ -37,7 +35,6 @@ export default function RegisterPage() {
     setServerError('');
     setLoading(true);
 
-    console.log('📝 開始註冊...');
 
     // 本地驗證
     if (formData.password !== formData.confirmPassword) {
@@ -103,7 +100,6 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary">Rollt</h1>
-          <p className="text-gray-600 mt-2">加入我們，分享你的故事</p>
         </div>
 
         {/* 伺服器錯誤 */}
@@ -148,7 +144,7 @@ export default function RegisterPage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="your@email.com"
+              placeholder="輸入信箱"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition text-gray-900"
               required
             />
@@ -164,7 +160,7 @@ export default function RegisterPage() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="至少 6 個字符"
+              placeholder="輸入至少 6 位密碼"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition text-gray-900"
               required
             />

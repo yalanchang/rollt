@@ -16,9 +16,9 @@ export default function Sidebar() {
     };
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 p-6 sticky top-0 h-screen overflow-y-auto">
+        <aside className="w-64 bg-white border-r border-gray-200 p-6 sticky top-0 h-full min-h-screen flex flex-col overflow-y-auto">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-pink-500">Rollt</h1>
+                <h1 className="text-3xl font-bold text-primary">Rollt</h1>
             </div>
 
             <nav className="space-y-4 mb-8">
@@ -28,27 +28,26 @@ export default function Sidebar() {
             </nav>
 
             {user && (
-                <div className="mt-auto pt-4 border-t space-y-4">
+                <div className="mt-auto pt-4 space-y-4 flex flex-col items-center ">
                     <button
                         onClick={() => router.push('/profile')}
-                        className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                        className="w-full flex items-center gap-3 justify-center cursor-pointer m-2"
                     >
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-400 flex items-center justify-center text-white font-bold">
-                            {user.username[0].toUpperCase()}
+                        <div className="flex items-center justify-center  gap-3 w-full">
+                            <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center text-white justify-center font-bold">
+                                {user.username[0].toUpperCase()}
+                            </div>
+                            <div className="flex ">
+                                <p className="font-semibold text-sm text-center">{user.username}</p>
+                            </div>
+
                         </div>
-                        <div className="flex-1">
-                            <p className="font-semibold text-sm">{user.username}</p>
-                            <p className="text-xs text-gray-500">{user.email}</p>
-                        </div>
-                        
-                    </div>
                     </button>
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="w-full flex items-center justify-center  p-2 text-red-600 hover:text-red-700 rounded-lg transition font-semibold"
                     >
-                        <BiLogOut /> 登出
+                        登出
                     </button>
                 </div>
             )}

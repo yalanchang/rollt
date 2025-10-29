@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore , type User } from '@/app/store/authStore';
+import { useAuthStore, type User } from '@/app/store/authStore';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMessage,faHeart} from '@fortawesome/free-regular-svg-icons';
+
+
 
 
 
@@ -20,13 +24,13 @@ interface Post {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, setUser } = useAuthStore() ;
+  const { user, setUser } = useAuthStore();
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
   const [formData, setFormData] = useState({
     username: user?.username || '',
     email: user?.email || '',
-    bio: '分享我的精彩時刻 📸',
+    bio: '我的精彩時刻 📸',
     avatar: '',
   });
 
@@ -38,6 +42,35 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/posts/my-posts`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          })
+
+
+        if (!response.ok) {
+          console.error('status', response.status);
+          return;
+        }
+
+        const data = await response.json();
+        setPosts(data)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchPosts();
+
+  }, [])
+
+
+  useEffect(() => {
     setMounted(true);
     if (!user) {
       router.push('/login');
@@ -45,8 +78,9 @@ export default function ProfilePage() {
   }, [user, router]);
 
   if (!mounted || !user) {
-    return null;  
+    return null;
   }
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -72,9 +106,6 @@ export default function ProfilePage() {
 
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
-      
-
-      console.log('個人資料已保存');
       setIsEditing(false);
 
       setTimeout(() => {
@@ -103,23 +134,10 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white">
-        
-      {/* 頂部導航 */}
-      <div className="border-b border-gray-200 sticky top-0 z-10 bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">{user.username}</h1>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold text-gray-900 transition"
-          >
-            {isEditing ? '取消' : '編輯個人資料'}
-          </button>
-        </div>
-      </div>
+
 
       {/* 主要內容 */}
       <div className="max-w-4xl mx-auto">
-        {/* 個人資料部分（IG 風格） */}
         <div className="border-b border-gray-200 px-4 py-12">
           <div className="flex gap-8 items-start">
             {/* 頭像 */}
@@ -133,6 +151,12 @@ export default function ProfilePage() {
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">{user.username}</h2>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold text-gray-900 transition"
+                >
+                  {isEditing ? '取消' : '編輯個人資料'}
+                </button>
               </div>
 
               <div className="flex gap-8 mb-4 text-gray-600">
@@ -155,7 +179,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* 編輯表單 */}
               {isEditing && (
                 <div className="space-y-4 mt-4">
                   <div>
@@ -203,7 +226,7 @@ export default function ProfilePage() {
                       onClick={() => setIsEditing(false)}
                       className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-2 rounded-lg transition"
                     >
-                       取消
+                      取消
                     </button>
                   </div>
                 </div>
@@ -215,42 +238,33 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 貼文網格 */}
-        <div className="px-4 py-8">
-          <h3 className="text-lg font-bold text-gray-900 mb-6">貼文</h3>
+        <div className="grid grid-cols-3 gap-1">
+          {posts.map((post) => (
+            <div
+              key={post.id}
+              className="relative aspect-square group overflow-hidden cursor-pointer"
+              onClick={()=>router.push(`./posts/${post.id}`)}
+            >
+              <img
+                src={post.imageUrl}
+                alt={post.caption}
+                className="w-full h-full object-cover group-hover:brightness-50 transition"
+              />
 
-          {posts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">還沒有貼文</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden hover:opacity-80 transition cursor-pointer group"
-                >
-                  <img
-                    src={post.imageUrl}
-                    alt={post.caption}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* 懸停時顯示互動數 */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center gap-6 opacity-0 group-hover:opacity-100">
-                    <div className="text-white text-center">
-                      <p className="text-2xl font-bold">❤️ {post.likes}</p>
-                      <p className="text-sm">喜歡</p>
-                    </div>
-                    <div className="text-white text-center">
-                      <p className="text-2xl font-bold">💬 {post.comments}</p>
-                      <p className="text-sm">留言</p>
-                    </div>
-                  </div>
+              <div className="absolute inset-0 flex items-center justify-center gap-6 opacity-0 group-hover:opacity-100 transition">
+                <div className="text-white font-bold text-center">
+                  <p className="text-3xl">
+                  <FontAwesomeIcon icon={faHeart} style={{color: "#ffffff",}} />
+                  </p>
+                  <p className="text-sm">{post.likes}</p>
                 </div>
-              ))}
+                <div className="text-white font-bold text-center">
+                  <p className="text-3xl"><FontAwesomeIcon icon={faMessage} style={{color: "#ffffff",}} /></p>
+                  <p className="text-sm">{post.comments}</p>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
 
         {/* 帳號設置 */}
