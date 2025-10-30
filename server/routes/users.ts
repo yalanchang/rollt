@@ -40,11 +40,11 @@ router.get("/:userId", async (req: Request, res: Response) => {
     const [followStats] = await db.query(
       `SELECT 
         (SELECT COUNT(*) FROM posts WHERE userId = ?) as postCount,
-        (SELECT COUNT(*) FROM follows WHERE followeeId = ?) as followerCount,
+        (SELECT COUNT(*) FROM follows WHERE userId = ?) as followerCount,
         (SELECT COUNT(*) FROM follows WHERE followerId = ?) as followingCount
       `,
       [userId, userId, userId]
-    );
+    )as any;
 
     res.json({
       user: (users as any[])[0],

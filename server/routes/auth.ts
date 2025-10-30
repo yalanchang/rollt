@@ -67,7 +67,6 @@ router.post("/login", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    console.log('🔑 [LOGIN] 登入請求:', { email });
 
     if (!email || !password) {
       return res.status(400).json({ message: "缺少必要字段" });
@@ -79,7 +78,6 @@ router.post("/login", async (req: Request, res: Response) => {
     );
 
     if ((users as any[]).length === 0) {
-      console.log('❌ [LOGIN] 用戶不存在:', email);
       return res.status(401).json({ message: "信箱或密碼錯誤" });
     }
 
@@ -87,7 +85,6 @@ router.post("/login", async (req: Request, res: Response) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      console.log('❌ [LOGIN] 密碼錯誤');
       return res.status(401).json({ message: "信箱或密碼錯誤" });
     }
 
@@ -96,6 +93,33 @@ router.post("/login", async (req: Request, res: Response) => {
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
     );
+
+    try {
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const ip = req.socket.remoteAddress || req.ip || 'unknown';
+      function parseUserAgent(userAgent: string) {
+        if (userAgent.includes('Chrome')) {
+          return 'Chrome';
+        } else if (userAgent.includes('Firefox')) {
+          return 'Firefox';
+        } else if (userAgent.includes('Safari')) {
+          return 'Safari';
+        } else if (userAgent.includes('Edge')) {
+          return 'Edge';
+        }
+        return '未知瀏覽器';
+      }
+      const deviceBrowser = parseUserAgent(userAgent);
+
+      await db.query(
+        `INSERT INTO sessions ( user_id, token, device_name, browser_info, ip_address, is_active, expires_at, last_activity_at)
+         VALUES ( ?, ?, ?, ?, ?, TRUE, DATE_ADD(NOW(), INTERVAL 7 DAY), NOW())`,
+        [user.id, token,'Browser', deviceBrowser, ip]
+      );
+
+    } catch (sessionErr) {
+      console.warn(' [LOGIN] 會話記錄失敗:', sessionErr);
+    }
 
     res.json({
       message: "登入成功",
@@ -289,17 +313,11 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
   }
 });
 
-// ========== 雙因子認證 API ==========
 
-/**
- * 生成 2FA QR Code
- * POST /api/auth/2fa/generate
- */
 router.post('/2fa/generate', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
 
-    // ✅ 改成 db.query()
     const [users] = await db.query(
       'SELECT email FROM users WHERE id = ?',
       [userId]
@@ -311,16 +329,15 @@ router.post('/2fa/generate', authMiddleware, async (req: AuthRequest, res: Respo
 
     const user = users[0];
 
-    // 生成密鑰
     const secret = speakeasy.generateSecret({
       name: `你的應用 (${user.email})`,
       length: 32
     });
 
-    // 生成 QR Code
+    console.log('🔐 OTP Auth URL:', secret.otpauth_url);
+
     const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
 
-    // ✅ 改成 db.query()
     await db.query(
       'UPDATE users SET two_factor_secret = ? WHERE id = ?',
       [secret.base32, userId]
@@ -425,15 +442,16 @@ router.post('/2fa/verify', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
-/**
- * 禁用 2FA
- * POST /api/auth/2fa/disable
- */
+
 router.post('/2fa/disable', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     const ip = req.socket.remoteAddress || req.ip || 'unknown';
     const { currentPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: '請輸入密碼以禁用 2FA' });
+    }
 
     const [users] = await db.query(
       'SELECT password FROM users WHERE id = ?',
@@ -487,10 +505,6 @@ router.post('/2fa/disable', authMiddleware, async (req: AuthRequest, res: Respon
 
 // ========== 會話管理 API ==========
 
-/**
- * 獲取安全信息
- * GET /api/auth/security-info
- */
 router.get('/security-info', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
@@ -536,10 +550,7 @@ router.get('/security-info', authMiddleware, async (req: AuthRequest, res: Respo
   }
 });
 
-/**
- * 登出特定會話
- * POST /api/auth/logout-session/:sessionId
- */
+
 router.post('/logout-session/:sessionId', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;

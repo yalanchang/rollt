@@ -188,13 +188,23 @@ export default function AccountSecurityPage() {
     const handleToggleTwoFactor = async () => {
         if (twoFactorEnabled) {
             // 禁用 2FA
+            const password = prompt('請輸入密碼以禁用雙因子認證:');
+
+            if (!password) {
+                setError('已取消禁用');
+                return;
+              }
+          
+
             try {
                 const response = await fetch(`${API_URL}/auth/2fa/disable`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify({ currentPassword: password }) 
+
                 });
 
                 if (response.ok) {
@@ -217,7 +227,7 @@ export default function AccountSecurityPage() {
                 });
                 if(response.ok){
                     const data = await response.json();
-                    setQrCode(data.qrCoda);
+                    setQrCode(data.qrCode);
                     setShowTwoFactorModal(true);
                 }else{
                     setError("生成失敗")
@@ -497,7 +507,7 @@ export default function AccountSecurityPage() {
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <p className="text-gray-700 text-sm leading-relaxed">
                             {twoFactorEnabled
-                                ? '雙重認證已啟用。登入時，除了密碼外，還需要輸入來自認證應用的代碼。'
+                                ? '雙重認證已啟用。 登入時，除了密碼外，還需要輸入來自認證應用的代碼。'
                                 : '啟用雙重認證後，登入時將需要使用認證應用生成的代碼，大大提高帳號安全性。'}
                         </p>
                     </div>
@@ -538,6 +548,7 @@ export default function AccountSecurityPage() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8">
                         <h3 className="text-2xl font-bold text-gray-900 mb-4">啟用雙因子認證</h3>
+                        
 
                         {qrCode && (
                             <div className="mb-6 flex justify-center">
