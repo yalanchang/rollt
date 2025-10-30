@@ -6,6 +6,8 @@ import authRoutes from "./routes/auth";
 import postRoutes from "./routes/posts";
 import userRoutes from "./routes/users";
 import { authMiddleware } from "./middleware/auth";
+import placesRouter from './routes/places';
+
 
 dotenv.config();
 
@@ -52,6 +54,8 @@ async function initDB() {
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/users", userRoutes);
+app.use('/api/places', placesRouter);
+
 
 
 async function startServer() {

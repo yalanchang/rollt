@@ -45,7 +45,6 @@ export default function Home() {
         setUser(JSON.parse(storedUser));
       }
 
-      // 獲取貼文
       await fetchPosts(token);
     } catch (err) {
       console.error('檢查認證失敗:', err);
@@ -82,7 +81,6 @@ export default function Home() {
     } catch (err: any) {
       console.error('獲取貼文錯誤:', err);
       
-      // 如果是認證錯誤，重定向到登入
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -112,8 +110,8 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <main className="flex-1 overflow-y-auto">
+    <div className="flex  bg-gray-50">
+      <main className="flex-1 ">
         <div className="max-w-2xl mx-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">你的動態</h2>

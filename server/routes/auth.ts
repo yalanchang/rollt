@@ -35,7 +35,6 @@ router.post("/register", async (req: Request, res: Response) => {
       [username, email, hashedPassword, defaultAvatar]
     );
 
-    console.log('✅ [REGISTER] 用戶已插入數據庫:', result);
 
     const token = jwt.sign(
       { userId: (result as any).insertId, username },
@@ -43,7 +42,6 @@ router.post("/register", async (req: Request, res: Response) => {
       { expiresIn: "7d" }
     );
 
-    console.log('🎫 [REGISTER] Token 已生成');
 
     res.status(201).json({
       message: "註冊成功",

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuthStore } from '@/app/store/authStore';
-import { BiImageAdd, BiX, BiCheck, BiVideo, BiUpload } from 'react-icons/bi';
+import { BiImageAdd, BiX, BiCheck, BiVideo, BiUpload,BiMapPin, BiCurrentLocation } from 'react-icons/bi';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -18,9 +18,16 @@ export default function CreatePage() {
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState('');
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [filteredLocations, setFilteredLocations] = useState<string[]>([]);
+  const [geoLocation, setGeoLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationInput, setLocationInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false); 
+
 
   useEffect(() => {
     setMounted(true);
@@ -40,6 +47,8 @@ export default function CreatePage() {
     return null;
   }
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -53,6 +62,8 @@ export default function CreatePage() {
         router.push('/login');
         return;
       }
+
+
 
       if (!file) {
         setError('請選擇要上傳的文件');
@@ -119,6 +130,7 @@ export default function CreatePage() {
       setUploading(false);
     }
   };
+  
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -168,6 +180,75 @@ export default function CreatePage() {
     fileInputRef.current?.click();
   };
 
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setError('你的瀏覽器不支持地理定位');
+      return;
+    }
+  
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setGeoLocation({ lat: latitude, lng: longitude });
+  
+        try {
+          const response = await axios.get(
+            `${API_URL}/places/geocode-reverse?latitude=${latitude}&longitude=${longitude}`
+          );
+  
+          if (response.data.results.length > 0) {
+            const address = response.data.results[0].formatted_address;
+            setLocationInput(address);
+            setLocation(address);
+          }
+        } catch (err) {
+          console.error('❌ 地址查詢失敗:', err);
+          setLocationInput(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        }
+      },
+      (error) => {
+        console.error('❌ 定位失敗:', error);
+        setError('無法獲取位置，請檢查權限');
+      }
+    );
+  };
+  
+    const handleLocationSearch = async (value: string) => {
+      setLocationInput(value);
+  
+      if (value.trim().length < 2) {
+        setFilteredLocations([]);
+        return;
+      }
+  
+      setSearchLoading(true);
+
+    try {
+    
+      const response = await axios.get(
+        `${API_URL}/places/autocomplete?input=${value}`
+      );
+  
+      const predictions = response.data.predictions.map((p: any) => p.description);
+      setFilteredLocations(predictions);
+    } catch (err) {
+      console.error('❌ 搜索失敗:', err);
+    } finally {
+      setSearchLoading(false);  
+    }
+  };
+  
+
+    
+  const handleSelectLocation = (selectedLocation: string) => {
+    setLocation(selectedLocation);
+    setShowLocationModal(false);
+    setLocationInput('');
+    setFilteredLocations([]);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
 
@@ -187,11 +268,7 @@ export default function CreatePage() {
 
           {/* 表單 */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 文件上傳區域 */}
             <div>
-
-
-              {/* 隱藏的文件輸入 */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -254,6 +331,30 @@ export default function CreatePage() {
               />
 
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <BiMapPin size={16} />
+                地點（可選）
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={location}
+                  readOnly
+                  onClick={() => setShowLocationModal(true)}
+                  placeholder="點擊選擇地點..."
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg outline-none transition text-gray-900 cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={handleGetLocation}
+                  className="px-4 py-2 text-blue-500  flex items-center gap-2 font-semibold"
+                >
+                  <BiCurrentLocation size={20} />
+                  定位
+                </button>
+              </div>
+            </div>
 
             {/* 按鈕 */}
             <div className="flex gap-3">
@@ -285,6 +386,62 @@ export default function CreatePage() {
 
         </div>
       </main>
+
+      {showLocationModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+          <div className="bg-white w-full rounded-t-2xl p-6 max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">選擇地點</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLocationModal(false);
+                  setLocationInput('');
+                  setFilteredLocations([]);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <BiX size={24} />
+              </button>
+            </div>
+
+            {/* 搜索輸入 */}
+            <input
+              type="text"
+              value={locationInput}
+              onChange={(e) => handleLocationSearch(e.target.value)}
+              placeholder="搜索地點..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-primary outline-none text-gray-900"
+            />
+
+            {/* 地點列表 */}
+            <div className="space-y-2">
+              {searchLoading && (
+                <div className="text-center py-4 text-gray-500">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              )}
+
+              {!searchLoading && filteredLocations.length === 0 && locationInput && (
+                <p className="text-center py-4 text-gray-500">沒有找到相匹配的地點</p>
+              )}
+
+              {filteredLocations.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => handleSelectLocation(loc)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg transition text-gray-900 flex items-center gap-2"
+                >
+                  <BiMapPin size={18} className="text-gray-500" />
+                  {loc}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+  
     </div>
   );
 }

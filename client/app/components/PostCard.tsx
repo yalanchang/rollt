@@ -55,7 +55,6 @@ export default function PostCard({ post }: PostCardProps) {
         )}
       </div>
 
-      {/* 媒體內容 */}
       {post.mediaType === 'video' ? (
         <video
           src={post.imageUrl}
@@ -95,7 +94,6 @@ export default function PostCard({ post }: PostCardProps) {
         </button>
       </div>
 
-      {/* 說明 */}
       <div className="p-4">
         <p className="text-gray-900">
           <span className="font-semibold">{post.username}</span> {post.caption}
