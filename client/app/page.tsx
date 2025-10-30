@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import Sidebar from '@/app/components/Sidebar';
 import PostCard from '@/app/components/PostCard';
 import { useAuthStore } from '@/app/store/authStore';
 import { usePostStore, Post } from '@/app/store/postStore';
@@ -114,11 +113,8 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto p-6">
-          {/* 頭部 */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">你的動態</h2>
           

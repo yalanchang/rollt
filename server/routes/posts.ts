@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { db } from "../index";
+
 import { authMiddleware } from "../middleware/auth";
 
 const router = express.Router();
@@ -290,5 +291,102 @@ router.delete(
     }
   }
 );
+
+// 新增留言
+router.post("/:postId/comments", authMiddleware, async (req: AuthRequest, res: Response) => {
+
+  const { postId } = req.params;
+  const { text } = req.body;
+  const userId = req.userId; 
+
+  if (!text || text.trim() === "") {
+    return res.status(400).json({ message: "留言內容不能空白" });
+  }
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO comments (postId, userId, content) VALUES (?, ?, ?)`,
+      [postId, userId, text]
+    );
+
+    const [newComment] = await db.query(`
+      SELECT 
+        c.id,
+        c.postId,
+        c.userId,
+        c.content,
+        c.createdAt,
+        u.username,
+        u.avatar as userAvatar
+      FROM comments c
+      JOIN users u ON c.userId = u.id
+      WHERE c.id = ?
+    `, [result.insertId]);
+
+    res.status(201).json(newComment[0]);
+  } catch (error) {
+    console.error("新增留言錯誤:", error);
+    res.status(500).json({ message: "伺服器錯誤" });
+  }
+});
+
+
+// 獲取留言
+router.get("/:postId/comments", async (req: AuthRequest, res: Response) => {
+  try {
+    const { postId } = req.params;
+
+    const [comments] = await db.query(`
+      SELECT 
+        c.id,
+        c.postId,
+        c.userId,
+        c.content,
+        c.createdAt,
+        u.username,
+        u.avatar as userAvatar
+      FROM comments c
+      JOIN users u ON c.userId = u.id
+      WHERE c.postId = ?
+      ORDER BY c.createdAt DESC
+    `, [postId]);
+
+    res.json(comments);
+  } catch (error) {
+    console.error("獲取留言錯誤:", error);
+    res.status(500).json({ message: "伺服器錯誤" });
+  }
+});
+
+// 刪除留言
+router.delete("/:postId/comments/:commentId", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { postId, commentId } = req.params;
+    const userId = req.userId;
+
+    const [comment] = await db.query(
+      "SELECT * FROM comments WHERE id = ? AND postId = ?",
+      [commentId, postId]
+    );
+
+    if ((comment as any[]).length === 0) {
+      return res.status(404).json({ message: "留言不存在" });
+    }
+
+    if ((comment as any[])[0].userId !== userId) {
+      return res.status(403).json({ message: "沒有權限刪除此留言" });
+    }
+
+    await db.query(
+      "DELETE FROM comments WHERE id = ?",
+      [commentId]
+    );
+
+    res.json({ message: "留言已刪除" });
+  } catch (error) {
+    console.error("刪除留言錯誤:", error);
+    res.status(500).json({ message: "伺服器錯誤" });
+  }
+});
 
 export default router;

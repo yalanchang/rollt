@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createConnection } from "mysql2/promise";
+import mysql from "mysql2/promise";  
 import authRoutes from "./routes/auth";
 import postRoutes from "./routes/posts";
 import userRoutes from "./routes/users";
@@ -21,7 +21,7 @@ export let db: any;
 
 async function initDB() {
   try {
-    db = await createConnection({
+    db = mysql.createPool({
       host: process.env.DB_HOST || "localhost",
       user: process.env.DB_USER || "root",
       password: process.env.DB_PASSWORD || "",
@@ -51,7 +51,7 @@ async function initDB() {
 }
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
-app.use("/api/users", authMiddleware, userRoutes);
+app.use("/api/users", userRoutes);
 
 
 async function startServer() {

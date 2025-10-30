@@ -34,7 +34,7 @@ export default function PostCard({ post }: PostCardProps) {
       {/* 頭部 */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-400 flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
             {post.username[0].toUpperCase()}
           </div>
           <div>

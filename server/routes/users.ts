@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { db } from "../index";
+import { authMiddleware } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get("/:userId", async (req: Request, res: Response) => {
       [userId]
     );
 
-    if (users.length === 0) {
+    if ((users as any[]).length === 0) {
       return res.status(404).json({ message: "用戶不存在" });
     }
 
@@ -36,9 +37,19 @@ router.get("/:userId", async (req: Request, res: Response) => {
       [userId]
     );
 
+    const [followStats] = await db.query(
+      `SELECT 
+        (SELECT COUNT(*) FROM posts WHERE userId = ?) as postCount,
+        (SELECT COUNT(*) FROM follows WHERE followeeId = ?) as followerCount,
+        (SELECT COUNT(*) FROM follows WHERE followerId = ?) as followingCount
+      `,
+      [userId, userId, userId]
+    );
+
     res.json({
-      user: users[0],
+      user: (users as any[])[0],
       posts,
+      stats: (followStats as any[])[0]
     });
   } catch (error) {
     console.error("獲取用戶錯誤:", error);
@@ -47,7 +58,7 @@ router.get("/:userId", async (req: Request, res: Response) => {
 });
 
 // 更新用戶資料
-router.put("/:userId", async (req: AuthRequest, res: Response) => {
+router.put("/:userId", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
     const { username, bio, avatar } = req.body;
@@ -66,7 +77,7 @@ router.put("/:userId", async (req: AuthRequest, res: Response) => {
       [userId]
     );
 
-    res.json(updatedUser[0]);
+    res.json((updatedUser as any[])[0]);
   } catch (error) {
     console.error("更新用戶錯誤:", error);
     res.status(500).json({ message: "伺服器錯誤" });
@@ -74,7 +85,7 @@ router.put("/:userId", async (req: AuthRequest, res: Response) => {
 });
 
 // 追隨用戶
-router.post("/:userId/follow", async (req: AuthRequest, res: Response) => {
+router.post("/:userId/follow", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
     const followerId = req.userId;
@@ -83,17 +94,19 @@ router.post("/:userId/follow", async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "無法追隨自己" });
     }
 
+    // 檢查是否已追隨
     const [existingFollow] = await db.query(
-      "SELECT * FROM follows WHERE userId = ? AND followerId = ?",
+      "SELECT * FROM follows WHERE followeeId = ? AND followerId = ?",
       [userId, followerId]
     );
 
-    if (existingFollow.length > 0) {
+    if ((existingFollow as any[]).length > 0) {
       return res.status(409).json({ message: "已經追隨此用戶" });
     }
 
+    // 插入追隨關係
     await db.query(
-      "INSERT INTO follows (userId, followerId) VALUES (?, ?)",
+      "INSERT INTO follows (followeeId, followerId) VALUES (?, ?)",
       [userId, followerId]
     );
 
@@ -105,13 +118,13 @@ router.post("/:userId/follow", async (req: AuthRequest, res: Response) => {
 });
 
 // 取消追隨
-router.post("/:userId/unfollow", async (req: AuthRequest, res: Response) => {
+router.post("/:userId/unfollow", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
     const followerId = req.userId;
 
     await db.query(
-      "DELETE FROM follows WHERE userId = ? AND followerId = ?",
+      "DELETE FROM follows WHERE followeeId = ? AND followerId = ?",
       [userId, followerId]
     );
 

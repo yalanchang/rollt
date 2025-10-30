@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuthStore } from '@/app/store/authStore';
-import Sidebar from '@/app/components/Sidebar';
 import { BiImageAdd, BiX, BiCheck, BiVideo, BiUpload } from 'react-icons/bi';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -171,7 +170,6 @@ export default function CreatePage() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto p-6">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore, type User } from '@/app/store/authStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -11,10 +12,13 @@ import { faMessage,faHeart} from '@fortawesome/free-regular-svg-icons';
 
 
 
+
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Post {
   id: number;
+  userId: number;
   imageUrl: string;
   caption: string;
   likes: number;
@@ -26,7 +30,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
   const [formData, setFormData] = useState({
     username: user?.username || '',
     email: user?.email || '',
@@ -40,6 +43,42 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [userStats, setUserStats] = useState({
+    postCount: 0,
+    followerCount: 0,
+    followingCount: 0
+  });
+
+ 
+useEffect(() => {
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_URL}/users/${user?.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.stats) {
+          setUserStats(data.stats);
+        }
+      }
+    } catch (error) {
+      console.error('獲取用戶資料失敗:', error);
+    }
+  };
+
+  if (user?.id) {
+    fetchUserProfile();
+  }
+}, [user?.id]);
+
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -61,6 +100,12 @@ export default function ProfilePage() {
 
         const data = await response.json();
         setPosts(data)
+
+      setUserStats(prev => ({
+        ...prev,
+        postCount: data.length
+      }));
+
       } catch (error) {
         console.log(error)
       }
@@ -68,6 +113,7 @@ export default function ProfilePage() {
     fetchPosts();
 
   }, [])
+  
 
 
   useEffect(() => {
@@ -80,6 +126,8 @@ export default function ProfilePage() {
   if (!mounted || !user) {
     return null;
   }
+
+
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -142,7 +190,7 @@ export default function ProfilePage() {
           <div className="flex gap-8 items-start">
             {/* 頭像 */}
             <div className="flex-shrink-0">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white text-5xl font-bold">
+              <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center text-white text-5xl font-bold">
                 {user.username[0].toUpperCase()}
               </div>
             </div>
@@ -161,19 +209,18 @@ export default function ProfilePage() {
 
               <div className="flex gap-8 mb-4 text-gray-600">
                 <div>
-                  <span className="font-bold text-gray-900">0</span> 個貼文
+                  <span className="font-bold text-gray-900">{userStats.postCount}</span> 個貼文
                 </div>
                 <div>
-                  <span className="font-bold text-gray-900">0</span> 粉絲
+                  <span className="font-bold text-gray-900">{userStats.followerCount}</span> 粉絲
                 </div>
                 <div>
-                  <span className="font-bold text-gray-900">0</span> 追蹤
+                  <span className="font-bold text-gray-900">{userStats.followingCount}</span> 追蹤
                 </div>
               </div>
 
               {!isEditing && (
                 <div>
-                  <p className="font-semibold text-gray-900">{user.username}</p>
                   <p className="text-gray-600 mt-2">{formData.bio}</p>
                   <p className="text-gray-500 text-sm mt-2">{user.email}</p>
                 </div>
@@ -266,11 +313,10 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+        
 
-        {/* 帳號設置 */}
         <div className="border-t border-gray-200 px-4 py-8">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">帳號設置</h3>
-
+        <Link href="/setup">帳號設置</Link>
           <button
             onClick={handleLogout}
             className="w-full p-4 text-left text-red-600 font-semibold hover:bg-red-50 rounded-lg transition"

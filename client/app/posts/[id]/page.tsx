@@ -13,17 +13,20 @@ interface Post {
   caption: string;
   likes: number;
   comments: number;
+  createdAt: string;
   username: string;
 }
 
+
 interface Comment {
-  id: number;
-  username: string;
-  text: string;
-  timestamp: string;
-  likes: number;
-  avatar?: string;
-}
+    id: number;
+    postId: number;
+    userId: number;
+    username: string;
+    content: string;
+    createdAt: string;
+    userAvatar?: string;
+  }
 
 interface CurrentUser {
   id: number;
@@ -43,6 +46,19 @@ export default function PostDetail() {
   const [commentText, setCommentText] = useState('');
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+
+  const getTimeAgo = (dateString: string): string => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+    if (seconds < 60) return '剛剛';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} 分鐘前`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小時前`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} 天前`;
+    
+    return date.toLocaleDateString('zh-TW');
+  };
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -82,7 +98,6 @@ export default function PostDetail() {
     fetchCurrentUser();
   }, [router]);
 
-  // 獲取貼文資料
   useEffect(() => {
     const fetchPost = async () => {
       try {
@@ -102,8 +117,8 @@ export default function PostDetail() {
         const data = await response.json();
         setPost(data);
         
-        // fetchComments();
-      } catch (error) {
+        await fetchComments();
+    } catch (error) {
         console.error('拿數據失敗:', error);
       } finally {
         setLoading(false);
@@ -113,25 +128,25 @@ export default function PostDetail() {
     fetchPost();
   }, [postId]);
 
-//   const fetchComments = async () => {
-//     try {
-//       const token = localStorage.getItem('token');
+  const fetchComments = async () => {
+    try {
+      const token = localStorage.getItem('token');
       
-//       const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
-//         headers: {
-//           'Authorization': `Bearer ${token}`,
-//           'Content-Type': 'application/json'
-//         }
-//       });
+      const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-//       if (response.ok) {
-//         const commentsData = await response.json();
-//         setComments(commentsData);
-//       }
-//     } catch (error) {
-//       console.error('獲取留言失敗:', error);
-//     }
-//   };
+      if (response.ok) {
+        const commentsData = await response.json();
+        setComments(commentsData);
+      }
+    } catch (error) {
+      console.error('獲取留言失敗:', error);
+    }
+  };
 
   const handleLike = async () => {
     if (!currentUser) {
@@ -187,19 +202,8 @@ export default function PostDetail() {
 
         if (response.ok) {
           const newComment = await response.json();
-          
-          // 添加新留言到列表
-          setComments([{
-            id: newComment.id,
-            username: currentUser.username,
-            avatar: currentUser.avatar,
-            text: commentText,
-            timestamp: '剛剛',
-            likes: 0
-          }, ...comments]);
-          
+          setComments([newComment, ...comments]);
           setCommentText('');
-          
           if (post) {
             setPost({
               ...post,
@@ -223,6 +227,7 @@ export default function PostDetail() {
       </div>
     );
   }
+  
 
   if (!post) {
     return (
@@ -304,9 +309,9 @@ export default function PostDetail() {
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 p-[2px]">
+                    <div className="w-12 h-12 rounded-full bg-primary to-indigo-500 p-[2px]">
                       <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                        <span className="text-lg font-bold bg-gradient-to-r from-pink-500 to-indigo-500 bg-clip-text text-transparent">
+                        <span className="text-lg font-bold bg-primary bg-clip-text text-transparent">
                           {post.username[0].toUpperCase()}
                         </span>
                       </div>
@@ -315,10 +320,11 @@ export default function PostDetail() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{post.username}</p>
-                    <p className="text-xs text-gray-500">發佈於 3 小時前</p>
+                    <p className="text-xs text-gray-500">發佈於 {getTimeAgo(post.createdAt)}
+                    </p>
                   </div>
                 </div>
-                <button className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full text-sm font-semibold hover:shadow-lg transform hover:scale-105 transition-all">
+                <button className="px-4 py-2 bg-primary text-white rounded-full text-sm font-semibold hover:shadow-lg transform hover:scale-105 transition-all">
                   追蹤
                 </button>
               </div>
@@ -326,13 +332,13 @@ export default function PostDetail() {
               <div className="px-6 py-4 border-b border-gray-100">
                 <p className="text-gray-800 leading-relaxed">{post.caption}</p>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium">
+                  <span className=" py-1  rounded-full text-xs font-medium">
                     #攝影
                   </span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-medium">
+                  <span className=" py-1 rounded-full text-xs font-medium">
                     #風景
                   </span>
-                  <span className="px-3 py-1 bg-pink-50 text-pink-600 rounded-full text-xs font-medium">
+                  <span className=" py-1  rounded-full text-xs font-medium">
                     #日常
                   </span>
                 </div>
@@ -354,15 +360,13 @@ export default function PostDetail() {
                   <span className="text-sm text-gray-500">分享</span>
                 </button>
               </div>
-              {/* 留言區 - 顯示每個留言的用戶頭像 */}
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 max-h-[300px]">
                 {comments.map((comment) => (
                   <div key={comment.id} className="flex gap-3 group">
-                    {/* 留言者頭像 */}
                     <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ring-1 ring-gray-200">
-                      {comment.avatar ? (
+                      {comment.userAvatar ? (
                         <img 
-                          src={comment.avatar}
+                          src={comment.userAvatar}
                           alt={comment.username}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -379,12 +383,13 @@ export default function PostDetail() {
                     <div className="flex-1">
                       <div className="bg-gray-50 rounded-2xl px-4 py-2 group-hover:bg-gray-100 transition-colors">
                         <p className="font-semibold text-sm text-gray-900">{comment.username}</p>
-                        <p className="text-gray-700 text-sm mt-1">{comment.text}</p>
+                        <p className="text-gray-700 text-sm mt-1">{comment.content}</p>
                       </div>
                       <div className="flex items-center gap-4 mt-2 px-2">
-                        <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                        <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleString('zh-TW')}
+</span>
                         <button className="text-xs text-gray-500 hover:text-red-500 transition-colors">
-                          ❤️ {comment.likes}
+                          ❤️ 
                         </button>
                         <button className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
                           回覆
@@ -395,13 +400,12 @@ export default function PostDetail() {
                 ))}
               </div>
 
-              {/* 留言輸入 - 使用當前登入用戶的頭像 */}
-              <div className="p-4 border-t border-gray-100 bg-gray-50">
+              <div className="p-4">
                 {currentUser ? (
                   <div className="flex gap-2">
                     {/* 當前用戶大頭貼 */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 p-[1.5px]">
+                      <div className="w-8 h-8 rounded-full bg-primary p-[1.5px]">
                         <div className="w-full h-full rounded-full overflow-hidden bg-white">
                           <img 
                             src={currentUser.avatar || `https://ui-avatars.com/api/?name=${currentUser.username}&background=818CF8&color=fff&size=32`}
@@ -414,24 +418,23 @@ export default function PostDetail() {
                           />
                         </div>
                       </div>
-                      {/* 在線狀態指示器 */}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-white"></div>
                     </div>
                     <div className="flex-1 flex gap-2">
                       <input
                         type="text"
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleComment()}
+                        onKeyDown={(e) => e.key === 'Enter' && handleComment()}
                         placeholder="發表你的想法..."
-                        className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-indigo-400 transition-colors"
+                        className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary transition-colors"
                       />
                       <button
                         onClick={handleComment}
+                        onKeyDown={(e) => e.key === "Enter" && handleComment()}
                         disabled={!commentText.trim()}
                         className={`p-2 rounded-full transition-all ${
                           commentText.trim()
-                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:shadow-lg transform hover:scale-105'
+                            ? 'bg-primary text-white hover:shadow-lg transform hover:scale-105'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                         }`}
                       >
